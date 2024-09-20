@@ -1,0 +1,10 @@
+name = "YYJSON"
+uuid = "dad5a794-77f7-4556-b071-d80a9747599c"
+version = "1.0.0"
+
+[deps]
+yyjson_jll = "c205f263-c50b-522f-8355-d1dd211834e2"
+
+[compat]
+yyjson_jll = "0.10"
+julia = "1.8"
