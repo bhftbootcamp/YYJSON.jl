@@ -2,6 +2,7 @@
 
 YYJSON is a convenient wrapper around [yyjson](https://github.com/ibireme/yyjson) library for reading and parsing JSON documents and provides its own parser implementation.
 
+```@raw html
 <html>
   <body>
     <table>
@@ -21,6 +22,7 @@ YYJSON is a convenient wrapper around [yyjson](https://github.com/ibireme/yyjson
     </table>
   </body>
 </html>
+```
 
 ## Installation
 
