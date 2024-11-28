@@ -6,6 +6,8 @@ export parse_json,
 
 using ..YYJSON
 
+include("Common.jl")
+
 struct YYJSONError <: Exception
     message::String
 end
@@ -85,44 +87,6 @@ function parse_value(val_ptr::Ptr{YYJSONVal}, dict_type::Type{<:AbstractDict}, n
     end
 end
 
-function bitwise_read_flag(;
-    in_situ::Bool = false,
-    number_as_raw::Bool = false,
-    bignum_as_raw::Bool = false,
-    stop_when_done::Bool = false,
-    allow_comments::Bool = false,
-    allow_inf_and_nan::Bool = false,
-    allow_invalid_unicode::Bool = false,
-    allow_trailing_commas::Bool = false,
-)
-    flag = YYJSON_READ_NOFLAG
-    flag |= in_situ               ? YYJSON_READ_INSITU                : flag
-    flag |= number_as_raw         ? YYJSON_READ_NUMBER_AS_RAW         : flag
-    flag |= bignum_as_raw         ? YYJSON_READ_BIGNUM_AS_RAW         : flag
-    flag |= stop_when_done        ? YYJSON_READ_STOP_WHEN_DONE        : flag
-    flag |= allow_comments        ? YYJSON_READ_ALLOW_COMMENTS        : flag
-    flag |= allow_inf_and_nan     ? YYJSON_READ_ALLOW_INF_AND_NAN     : flag
-    flag |= allow_invalid_unicode ? YYJSON_READ_ALLOW_INVALID_UNICODE : flag
-    flag |= allow_trailing_commas ? YYJSON_READ_ALLOW_TRAILING_COMMAS : flag
-    return flag
-end
-
-function read_json_doc(json::AbstractString; kw...)
-    err = YYJSONReadErr()
-    doc_ptr = yyjson_read_opts(
-        json,
-        ncodeunits(json),
-        bitwise_read_flag(; kw...),
-        C_NULL,
-        pointer_from_objref(err),
-    )
-    if doc_ptr == C_NULL
-        yyjson_doc_free(doc_ptr)
-        throw(err)
-    end
-    return doc_ptr
-end
-
 function open_json_doc(path::AbstractString; kw...)
     err = YYJSONReadErr()
     doc_ptr = yyjson_read_file(
@@ -179,7 +143,7 @@ Dict{String, Any} with 6 entries:
 ```
 """
 function parse_json(
-    json::AbstractString;
+    json::Union{AbstractString,AbstractVector{UInt8}};
     dict_type::Type{<:AbstractDict} = Dict{String,Any},
     null::NullType = nothing,
     kw...
@@ -196,9 +160,9 @@ function parse_json(
     end
 end
 
-function parse_json(json::AbstractVector{UInt8}; kw...)
-    return parse_json(unsafe_string(pointer(json), length(json)); kw...)
-end
+# function parse_json(json::AbstractVector{UInt8}; kw...)
+#     return parse_json(unsafe_string(pointer(json), length(json)); kw...)
+# end
 
 """
     open_json(path::AbstractString; kw...)
