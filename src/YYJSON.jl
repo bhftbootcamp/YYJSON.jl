@@ -160,11 +160,17 @@ export yyjson_is_obj,
     yyjson_obj_iter_get_val
 
 export yyjson_alc_dyn_new,
-    yyjson_alc_dyn_free
+    yyjson_alc_dyn_free,
+    yyjson_alc_pool_init
 
 export parse_json,
     open_json,
     YYJSONError
+
+export lazy_parse,
+    JSONObject,
+    JSONDoc,
+    LazyYYJSONError
 
 using yyjson_jll
 
@@ -179,23 +185,23 @@ const YYJSON_SUBTYPE_MASK = 0x18 # 00011000
 const YYJSON_RESERVED_MASK = 0xE0 # 11100000
 
 const YYJSONType = UInt8
-const YYJSON_TYPE_NONE = 0
-const YYJSON_TYPE_RAW = 1
-const YYJSON_TYPE_NULL = 2
-const YYJSON_TYPE_BOOL = 3
-const YYJSON_TYPE_NUM = 4
-const YYJSON_TYPE_STR = 5
-const YYJSON_TYPE_ARR = 6
-const YYJSON_TYPE_OBJ = 7
+const YYJSON_TYPE_NONE = 0 % UInt8
+const YYJSON_TYPE_RAW = 1 % UInt8
+const YYJSON_TYPE_NULL = 2 % UInt8
+const YYJSON_TYPE_BOOL = 3 % UInt8
+const YYJSON_TYPE_NUM = 4 % UInt8
+const YYJSON_TYPE_STR = 5 % UInt8
+const YYJSON_TYPE_ARR = 6 % UInt8
+const YYJSON_TYPE_OBJ = 7 % UInt8
 
 const YYJSONSubtype = UInt8
-const YYJSON_SUBTYPE_NONE = 0 << 3
-const YYJSON_SUBTYPE_NOESC = 1 << 3
-const YYJSON_SUBTYPE_UINT = 0 << 3
-const YYJSON_SUBTYPE_SINT = 1 << 3
-const YYJSON_SUBTYPE_REAL = 2 << 3
-const YYJSON_SUBTYPE_TRUE = 1 << 3
-const YYJSON_SUBTYPE_FALSE = 0 << 3
+const YYJSON_SUBTYPE_NONE = 0 << 3 % UInt8
+const YYJSON_SUBTYPE_NOESC = 1 << 3 % UInt8
+const YYJSON_SUBTYPE_UINT = 0 << 3 % UInt8
+const YYJSON_SUBTYPE_SINT = 1 << 3 % UInt8
+const YYJSON_SUBTYPE_REAL = 2 << 3 % UInt8
+const YYJSON_SUBTYPE_TRUE = 1 << 3 % UInt8
+const YYJSON_SUBTYPE_FALSE = 0 << 3 % UInt8
 
 const YYJSONPtrCode = UInt32
 const YYJSON_PTR_ERR_NONE = 0
@@ -235,7 +241,16 @@ const YYJSON_READ_ERROR_FILE_READ = 13
 
 struct YYJSONDoc end
 struct YYJSONVal end
-struct YYJSONAlc end
+struct YYJSONAlc
+    malloc::Ptr{Cvoid}
+    realloc::Ptr{Cvoid}
+    free::Ptr{Cvoid}
+    ctx::Ptr{Cvoid}
+
+    function YYJSONAlc()
+        return new(C_NULL, C_NULL, C_NULL, C_NULL)
+    end
+end
 
 mutable struct YYJSONReadErr <: Exception
     code::YYJSONReadCode
@@ -603,6 +618,10 @@ end
 
 function yyjson_alc_dyn_free(alc)
     return ccall((:yyjson_alc_dyn_free, libyyjson), Cvoid, (Ptr{YYJSONAlc},), alc)
+end
+
+function yyjson_alc_pool_init(alc, buff, size)
+    return ccall((:yyjson_alc_pool_init, libyyjson), Bool, (Ptr{YYJSONAlc}, Ptr{Cvoid}, Csize_t), alc, buff, size)
 end
 
 include("Parser.jl")
