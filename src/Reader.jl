@@ -1,3 +1,9 @@
+module Reader
+
+export read_json_doc, open_json_doc
+
+using ..YYJSON
+
 function bitwise_read_flag(;
     in_situ::Bool = false,
     number_as_raw::Bool = false,
@@ -43,4 +49,6 @@ function open_json_doc(path::AbstractString; kw...)
     )
     doc_ptr == C_NULL && throw(err)
     return doc_ptr
+end
+
 end

@@ -592,7 +592,8 @@ function yyjson_obj_iter_get_val(key)
     return ccall((:yyjson_obj_iter_get_val, libyyjson), Ptr{YYJSONVal}, (Ptr{YYJSONVal},), key)
 end
 
-include("Utils.jl")
+include("Reader.jl")
+using .Reader
 
 include("Parser.jl")
 using .Parser
