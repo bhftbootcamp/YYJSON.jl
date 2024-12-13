@@ -167,6 +167,12 @@ export parse_json,
     open_json,
     YYJSONError
 
+export JSONDoc,
+    LazyDict,
+    LazyVector,
+    LazyYYJSONError,
+    lazy_parse
+
 using yyjson_jll
 
 const YYJSON_TAG_BIT = 0x08
@@ -615,5 +621,8 @@ using .Reader
 
 include("Parser.jl")
 using .Parser
+
+include("LazyParser.jl")
+using .LazyParser
 
 end
