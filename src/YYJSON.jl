@@ -159,6 +159,10 @@ export yyjson_is_obj,
     yyjson_obj_iter_getn,
     yyjson_obj_iter_get_val
 
+export yyjson_alc_dyn_new,
+    yyjson_alc_dyn_free,
+    yyjson_alc_pool_init
+
 export parse_json,
     open_json,
     YYJSONError
@@ -590,6 +594,20 @@ end
 
 function yyjson_obj_iter_get_val(key)
     return ccall((:yyjson_obj_iter_get_val, libyyjson), Ptr{YYJSONVal}, (Ptr{YYJSONVal},), key)
+end
+
+#__Allocator
+
+function yyjson_alc_dyn_new()
+    return ccall((:yyjson_alc_dyn_new, libyyjson), Ptr{YYJSONAlc}, ())
+end
+
+function yyjson_alc_dyn_free(alc)
+    return ccall((:yyjson_alc_dyn_free, libyyjson), Cvoid, (Ptr{YYJSONAlc},), alc)
+end
+
+function yyjson_alc_pool_init(alc, buff, size)
+    return ccall((:yyjson_alc_pool_init, libyyjson), Bool, (Ptr{YYJSONAlc}, Ptr{Cvoid}, Csize_t), alc, buff, size)
 end
 
 include("Reader.jl")
