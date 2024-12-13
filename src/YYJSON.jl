@@ -381,7 +381,7 @@ function yyjson_get_subtype(val)
 end
 
 function yyjson_get_type_desc(val)
-    return ccall((:yyjson_get_type_desc, libyyjson), String, (Ptr{YYJSONVal},), val)
+    return ccall((:yyjson_get_type_desc, libyyjson), Ptr{UInt8}, (Ptr{YYJSONVal},), val)
 end
 
 #__ Raw
@@ -591,6 +591,9 @@ end
 function yyjson_obj_iter_get_val(key)
     return ccall((:yyjson_obj_iter_get_val, libyyjson), Ptr{YYJSONVal}, (Ptr{YYJSONVal},), key)
 end
+
+include("Reader.jl")
+using .Reader
 
 include("Parser.jl")
 using .Parser
