@@ -5,6 +5,7 @@ export parse_json,
     YYJSONError
 
 using ..YYJSON
+import ..YYJSON: read_json_doc, open_json_doc
 
 struct YYJSONError <: Exception
     message::String
@@ -131,7 +132,7 @@ function parse_json(
     null::NullType = nothing,
     kw...
 )
-    doc_ptr = YYJSON.read_json_doc(json; kw...)
+    doc_ptr = read_json_doc(json; kw...)
     try
         return parse_value(
             yyjson_doc_get_root(doc_ptr),
@@ -161,7 +162,7 @@ function open_json(
     null::NullType = nothing,
     kw...
 )
-    doc_ptr = YYJSON.open_json_doc(path; kw...)
+    doc_ptr = open_json_doc(path; kw...)
     try
         return parse_value(
             yyjson_doc_get_root(doc_ptr),
