@@ -381,7 +381,7 @@ function yyjson_get_subtype(val)
 end
 
 function yyjson_get_type_desc(val)
-    return ccall((:yyjson_get_type_desc, libyyjson), String, (Ptr{YYJSONVal},), val)
+    return ccall((:yyjson_get_type_desc, libyyjson), Ptr{UInt8}, (Ptr{YYJSONVal},), val)
 end
 
 #__ Raw
