@@ -286,9 +286,10 @@ mutable struct YYJSONObjIter
     idx::Csize_t
     max::Csize_t
     cur::Ptr{YYJSONVal}
+    obj::Ptr{YYJSONVal}
 
     function YYJSONObjIter()
-        return new(0, 0, C_NULL)
+        return new(0, 0, C_NULL, C_NULL)
     end
 end
 

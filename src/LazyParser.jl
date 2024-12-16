@@ -16,56 +16,13 @@ end
 
 Base.show(io::IO, e::LazyYYJSONError) = print(io, e.message)
 
-"""
-```julia
-using YYJSON
-
-json = \"\"\" {"body":{"count":1726219849072.1, "count2": 1},"name":"json","id":100,"bool":false,"arr":[1,2,["a","b"],false]} \"\"\";
-
-doc = lazy_parse(json)
-
-julia> doc["body"]
-LazyDict{Ptr{YYJSONVal}} with 2 entries:
-  "count"  => 1.72622e12
-  "count2" => 1.0
-
-julia> doc["name"]
-"json"
-
-julia> doc["id"]
-100.0
-
-julia> doc["arr"]
-4-element LazyVector{Ptr{YYJSONVal}}:
-     1.0
-     2.0
-      Ptr{YYJSONVal}["a", "b"]
- false
-
-julia> body = doc["body"]
-LazyDict{Ptr{YYJSONVal}} with 2 entries:
-  "count"  => 1.72622e12
-  "count2" => 1.0
-
-julia> GC.@preserve body for (k,v) in body
-           println("\$k => \$v")
-       end
-count => 1.7262198490721e12
-count2 => 1.0
-```
-"""
 struct LazyDict{T<:Ptr{YYJSONVal}} <: AbstractDict{AbstractString, Ptr{YYJSONVal}}
     obj_ptr::T
-    #iter::YYJSONObjIter
-    iter_ptr::Ptr{YYJSONObjIter}
-    #iter_ref::Ref{YYJSONObjIter}
+    iter::YYJSONObjIter
 
     function LazyDict(obj_ptr::Ptr{YYJSONVal})
         iter = YYJSONObjIter()
-        iter_ref = Ref(iter)
-        iter_ptr = Base.unsafe_convert(Ptr{YYJSONObjIter}, iter_ref)
-
-        new{Ptr{YYJSONVal}}(obj_ptr, iter_ptr)#iter, iter_ptr, iter_ref)
+        new{Ptr{YYJSONVal}}(obj_ptr, iter)
     end
 end
 
@@ -87,121 +44,34 @@ function Base.get(obj::LazyDict, key::String, default)
     end    
 end
 
-# function Base.iterate(obj::LazyDict)
-#     iter = obj.iter
-#     iter_ptr = pointer_from_objref(iter)
-#     GC.@preserve iter begin
-#         yyjson_obj_iter_init(obj.obj_ptr, iter_ptr) || throw(LazyYYJSONError("Failed to initialize object iterator"))
-
-#         yyjson_obj_iter_has_next(iter_ptr) || return nothing
-        
-#         key_ptr = yyjson_obj_iter_next(iter_ptr)
-#         key = parse_string(key_ptr)
-#         val_ptr = yyjson_obj_iter_get_val(key_ptr)
-#         val = parse_value(val_ptr)
-#         new_state = yyjson_obj_iter_has_next(iter_ptr)
-#         return (key => val), new_state
-#     end
-# end
-
-# function Base.iterate(obj::LazyDict, state)
-#     state || return nothing
-#     iter = obj.iter
-#     iter_ptr = pointer_from_objref(iter)
-#     GC.@preserve iter begin
-#         key_ptr = yyjson_obj_iter_next(iter_ptr)
-#         key = parse_string(key_ptr)
-#         val_ptr = yyjson_obj_iter_get_val(key_ptr)
-#         val = parse_value(val_ptr)
-#         new_state = yyjson_obj_iter_has_next(iter_ptr)
-#         return (key => val), new_state
-#     end
-# end
-
-# function Base.iterate(obj::LazyDict)
-#     GC.@preserve obj begin
-#         yyjson_obj_iter_init(obj.obj_ptr, obj.iter_ptr) || throw(LazyYYJSONError("Failed to initialize object iterator"))
-
-#         yyjson_obj_iter_has_next(obj.iter_ptr) || return nothing
-        
-#         key_ptr = yyjson_obj_iter_next(obj.iter_ptr)
-#         key = parse_string(key_ptr)
-#         val_ptr = yyjson_obj_iter_get_val(key_ptr)
-#         val = parse_value(val_ptr)
-#         new_state = yyjson_obj_iter_has_next(obj.iter_ptr)
-#         kv = (key => val)
-#         return kv, new_state
-#     end
-# end
-
-# function Base.iterate(obj::LazyDict, state)
-#     state || return nothing
-#     GC.@preserve obj begin
-#         key_ptr = yyjson_obj_iter_next(obj.iter_ptr)
-#         key = parse_string(key_ptr)
-#         val_ptr = yyjson_obj_iter_get_val(key_ptr)
-#         val = parse_value(val_ptr)
-#         new_state = yyjson_obj_iter_has_next(obj.iter_ptr)
-#         kv = (key => val)
-#         return kv, new_state
-#     end
-# end
-
-# function Base.iterate(obj::LazyDict)
-#     iter_ptr = Base.unsafe_convert(Ptr{YYJSONObjIter}, obj.iter_ref)
-#     GC.@preserve obj begin
-#         yyjson_obj_iter_init(obj.obj_ptr, iter_ptr) || throw(LazyYYJSONError("Failed to initialize object iterator"))
-
-#         yyjson_obj_iter_has_next(iter_ptr) || return nothing
-        
-#         key_ptr = yyjson_obj_iter_next(iter_ptr)
-#         key = parse_string(key_ptr)
-#         val_ptr = yyjson_obj_iter_get_val(key_ptr)
-#         val = parse_value(val_ptr)
-#         new_state = yyjson_obj_iter_has_next(iter_ptr)
-#         return (key => val), new_state
-#     end
-# end
-
-# function Base.iterate(obj::LazyDict, state)
-#     state || return nothing
-#     iter_ptr = Base.unsafe_convert(Ptr{YYJSONObjIter}, obj.iter_ref)
-#     GC.@preserve obj begin
-#         key_ptr = yyjson_obj_iter_next(iter_ptr)
-#         key = parse_string(key_ptr)
-#         val_ptr = yyjson_obj_iter_get_val(key_ptr)
-#         val = parse_value(val_ptr)
-#         new_state = yyjson_obj_iter_has_next(iter_ptr)
-#         return (key => val), new_state
-#     end
-# end
-
 function Base.iterate(obj::LazyDict)
-    GC.@preserve obj begin
-        yyjson_obj_iter_init(obj.obj_ptr, obj.iter_ptr) || throw(LazyYYJSONError("Failed to initialize object iterator"))
+    iter = obj.iter
+    iter_ptr = pointer_from_objref(iter)
+    GC.@preserve iter begin
+        yyjson_obj_iter_init(obj.obj_ptr, iter_ptr) || throw(LazyYYJSONError("Failed to initialize object iterator"))
 
-        yyjson_obj_iter_has_next(obj.iter_ptr) || return nothing
+        yyjson_obj_iter_has_next(iter_ptr) || return nothing
         
-        key_ptr = yyjson_obj_iter_next(obj.iter_ptr)
+        key_ptr = yyjson_obj_iter_next(iter_ptr)
         key = parse_string(key_ptr)
         val_ptr = yyjson_obj_iter_get_val(key_ptr)
         val = parse_value(val_ptr)
-        new_state = yyjson_obj_iter_has_next(obj.iter_ptr)
-        kv = (key => val)
-        return kv, new_state
+        new_state = yyjson_obj_iter_has_next(iter_ptr)
+        return (key => val), new_state
     end
 end
 
-function Base.iterate(obj::LazyDict, state::Bool)
-    GC.@preserve obj begin
-        state || return nothing
-        key_ptr = yyjson_obj_iter_next(obj.iter_ptr)
+function Base.iterate(obj::LazyDict, state)
+    state || return nothing
+    iter = obj.iter
+    iter_ptr = pointer_from_objref(iter)
+    GC.@preserve iter begin
+        key_ptr = yyjson_obj_iter_next(iter_ptr)
         key = parse_string(key_ptr)
         val_ptr = yyjson_obj_iter_get_val(key_ptr)
         val = parse_value(val_ptr)
-        new_state = yyjson_obj_iter_has_next(obj.iter_ptr)
-        kv = (key => val)
-        return kv, new_state
+        new_state = yyjson_obj_iter_has_next(iter_ptr)
+        return (key => val), new_state
     end
 end
 
