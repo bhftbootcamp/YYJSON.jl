@@ -5,7 +5,7 @@ export JSONDoc,
     LazyVector,
     LazyYYJSONError
 
-export lazy_parse
+export lazy_parse, lazy_open
 
 using ..YYJSON
 import ..YYJSON: read_json_doc, open_json_doc
@@ -197,18 +197,53 @@ function parse_number(ptr::Ptr{YYJSONVal})
     end
 end
 
-function lazy_parse(json::AbstractString; kw...)
-    allocator = yyjson_alc_dyn_new()
-    doc_ptr = read_json_doc(json; alc = allocator, kw...)
+function parse_root(doc_ptr::Ptr{YYJSONDoc})
     root_ptr = yyjson_doc_get_root(doc_ptr)
     root_ptr == C_NULL && throw(LazyYYJSONError("Error while parsing root: $root"))
     root = parse_value(root_ptr)
+    return root
+end
+
+function lazy_parse(json::AbstractString; kw...)
+    allocator = yyjson_alc_dyn_new()
+    doc_ptr = read_json_doc(json; alc = allocator, kw...)
+    root = parse_root(doc_ptr)
     doc = JSONDoc(doc_ptr, allocator, root)
     return doc
 end
 
 function lazy_parse(json::AbstractVector{UInt8}; kw...)
     return lazy_parse(unsafe_string(pointer(json), length(json)); kw...)
+end
+
+function lazy_parse(f::Function, x...; kw...)
+    doc = lazy_parse(x...; kw...)
+    try
+        f(doc)
+    finally
+        close(doc)
+    end
+end
+
+function lazy_open(path::AbstractString; kw...)
+    allocator = yyjson_alc_dyn_new()
+    doc_ptr = open_json_doc(path; alc = allocator, kw...)
+    root = parse_root(doc_ptr)
+    doc = JSONDoc(doc_ptr, allocator, root)
+    return doc
+end
+
+function lazy_open(io::IO; kw...)
+    return lazy_parse(read(io))
+end
+
+function lazy_open(f::Function, x...; kw...)
+    doc = lazy_open(x...; kw...)
+    try
+        f(doc)
+    finally
+        close(doc)
+    end
 end
 
 end

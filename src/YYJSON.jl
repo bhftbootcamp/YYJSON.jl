@@ -171,7 +171,8 @@ export JSONDoc,
     LazyDict,
     LazyVector,
     LazyYYJSONError,
-    lazy_parse
+    lazy_parse,
+    lazy_open
 
 using yyjson_jll
 

@@ -477,6 +477,10 @@ end
         ]
         """
         @test lazy_parse(byte_json) isa JSONDoc{LazyVector{Ptr{YYJSONVal}}}
+
+        lazy_parse(byte_json) do doc
+            @test doc isa JSONDoc{LazyVector{Ptr{YYJSONVal}}}
+        end
     end
 
     @testset "Case №2: LazyDict interfaces" begin
