@@ -159,9 +159,20 @@ export yyjson_is_obj,
     yyjson_obj_iter_getn,
     yyjson_obj_iter_get_val
 
+export yyjson_alc_dyn_new,
+    yyjson_alc_dyn_free,
+    yyjson_alc_pool_init
+
 export parse_json,
     open_json,
     YYJSONError
+
+export JSONDoc,
+    LazyDict,
+    LazyVector,
+    LazyYYJSONError,
+    lazy_parse,
+    lazy_open
 
 using yyjson_jll
 
@@ -276,9 +287,10 @@ mutable struct YYJSONObjIter
     idx::Csize_t
     max::Csize_t
     cur::Ptr{YYJSONVal}
+    obj::Ptr{YYJSONVal}
 
     function YYJSONObjIter()
-        return new(0, 0, C_NULL)
+        return new(0, 0, C_NULL, C_NULL)
     end
 end
 
@@ -592,10 +604,27 @@ function yyjson_obj_iter_get_val(key)
     return ccall((:yyjson_obj_iter_get_val, libyyjson), Ptr{YYJSONVal}, (Ptr{YYJSONVal},), key)
 end
 
+#__Allocator
+
+function yyjson_alc_dyn_new()
+    return ccall((:yyjson_alc_dyn_new, libyyjson), Ptr{YYJSONAlc}, ())
+end
+
+function yyjson_alc_dyn_free(alc)
+    return ccall((:yyjson_alc_dyn_free, libyyjson), Cvoid, (Ptr{YYJSONAlc},), alc)
+end
+
+function yyjson_alc_pool_init(alc, buff, size)
+    return ccall((:yyjson_alc_pool_init, libyyjson), Bool, (Ptr{YYJSONAlc}, Ptr{Cvoid}, Csize_t), alc, buff, size)
+end
+
 include("Reader.jl")
 using .Reader
 
 include("Parser.jl")
 using .Parser
+
+include("LazyParser.jl")
+using .LazyParser
 
 end
