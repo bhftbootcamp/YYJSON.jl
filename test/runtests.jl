@@ -467,7 +467,7 @@ end
             "c": "3"
         }
         """
-        @test lazy_parse(str_json) isa JSONDoc{LazyDict{Ptr{YYJSONVal}}}
+        @test lazy_parse(str_json) isa JSONDoc{LazyDict}
 
         byte_json = b"""
         [
@@ -476,10 +476,10 @@ end
             "3"
         ]
         """
-        @test lazy_parse(byte_json) isa JSONDoc{LazyVector{Ptr{YYJSONVal}}}
+        @test lazy_parse(byte_json) isa JSONDoc{LazyVector}
 
         lazy_parse(byte_json) do doc
-            @test doc isa JSONDoc{LazyVector{Ptr{YYJSONVal}}}
+            @test doc isa JSONDoc{LazyVector}
         end
     end
 
@@ -501,8 +501,8 @@ end
         @test doc["b"] == 1.0 && doc["b"] isa Float64
         @test doc["c"] == 3 && doc["c"] isa Int64
         @test doc["d"]
-        @test doc["e"] isa LazyVector{Ptr{YYJSONVal}}
-        @test doc["f"] isa LazyDict{Ptr{YYJSONVal}}
+        @test doc["e"] isa LazyVector
+        @test doc["f"] isa LazyDict
         @test doc["g"] === nothing
 
         @test_throws KeyError doc["h"]
@@ -529,8 +529,8 @@ end
         @test doc[2] == 1.0 && doc[2] isa Float64
         @test doc[3] == 3 && doc[3] isa Int64
         @test doc[4]
-        @test doc[5] isa LazyVector{Ptr{YYJSONVal}}
-        @test doc[6] isa LazyDict{Ptr{YYJSONVal}}
+        @test doc[5] isa LazyVector
+        @test doc[6] isa LazyDict
         @test doc[7] === nothing
 
         @test_throws BoundsError doc[8]
