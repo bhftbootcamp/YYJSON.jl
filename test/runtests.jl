@@ -457,3 +457,86 @@ using YYJSON
         @test parse_json(str_json, allow_invalid_unicode = true) == Dict{String,Any}("c" => "\x81", "b" => "\xf0", "a" => "\x80xyz")
     end
 end
+
+@testset "Lazy Parser" begin
+    @testset "Case №1: Parse from string, byte vector" begin
+        str_json = """
+        {
+            "a": "1",
+            "b": "2",
+            "c": "3"
+        }
+        """
+        @test lazy_parse(str_json) isa JSONDoc{LazyDict}
+
+        byte_json = b"""
+        [
+            "1",
+            "2",
+            "3"
+        ]
+        """
+        @test lazy_parse(byte_json) isa JSONDoc{LazyVector}
+
+        lazy_parse(byte_json) do doc
+            @test doc isa JSONDoc{LazyVector}
+        end
+    end
+
+    @testset "Case №2: LazyDict interfaces" begin
+        str_json = """
+        {
+            "a": "string",
+            "b": 1.0,
+            "c": 3,
+            "d": true,
+            "e": [1, "2", false],
+            "f": {"1": 1, "2": 2},
+            "g": null
+        }
+        """
+        doc = lazy_parse(str_json)
+
+        @test doc["a"] == "string"
+        @test doc["b"] == 1.0 && doc["b"] isa Float64
+        @test doc["c"] == 3 && doc["c"] isa Int64
+        @test doc["d"]
+        @test doc["e"] isa LazyVector
+        @test doc["f"] isa LazyDict
+        @test doc["g"] === nothing
+
+        @test_throws KeyError doc["h"]
+        @test ismissing(get(doc, "h", missing))
+
+        @test collect(keys(doc)) == ["a", "b", "c", "d", "e", "f", "g"]
+        @test length(doc) == 7
+    end
+    @testset "Case №3: LazyVector interfaces" begin
+        str_json = """
+        [
+            "string",
+            1.0,
+            3,
+            true,
+            [1, "2", false],
+            {"1": 1, "2": 2},
+            null
+        ]
+        """ 
+        doc = lazy_parse(str_json)
+
+        @test doc[1] == "string"
+        @test doc[2] == 1.0 && doc[2] isa Float64
+        @test doc[3] == 3 && doc[3] isa Int64
+        @test doc[4]
+        @test doc[5] isa LazyVector
+        @test doc[6] isa LazyDict
+        @test doc[7] === nothing
+
+        @test_throws BoundsError doc[8]
+        @test ismissing(get(doc, 8, missing))
+
+        @test collect(keys(doc)) == Int64[1,2,3,4,5,6,7]
+        @test length(doc) == 7
+    end
+end
