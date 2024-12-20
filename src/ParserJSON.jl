@@ -1,4 +1,4 @@
-module Parser
+module ParserJSON
 
 export parse_json,
     open_json,

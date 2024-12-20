@@ -467,7 +467,7 @@ end
             "c": "3"
         }
         """
-        @test lazy_parse(str_json) isa LazyDict
+        @test parse_lazy_json(str_json) isa LazyJSONDict
 
         byte_json = b"""
         [
@@ -476,14 +476,14 @@ end
             "3"
         ]
         """
-        @test lazy_parse(byte_json) isa LazyVector
+        @test parse_lazy_json(byte_json) isa LazyJSONVector
 
-        lazy_parse(byte_json) do doc
-            @test doc isa LazyVector
+        parse_lazy_json(byte_json) do doc
+            @test doc isa LazyJSONVector
         end
     end
 
-    @testset "Case №2: LazyDict interfaces" begin
+    @testset "Case №2: LazyJSONDict interfaces" begin
         str_json = """
         {
             "a": "string",
@@ -495,14 +495,14 @@ end
             "g": null
         }
         """
-        doc = lazy_parse(str_json)
+        doc = parse_lazy_json(str_json)
 
         @test doc["a"] == "string"
         @test doc["b"] == 1.0 && doc["b"] isa Float64
         @test doc["c"] == 3 && doc["c"] isa Int64
         @test doc["d"]
-        @test doc["e"] isa LazyVector
-        @test doc["f"] isa LazyDict
+        @test doc["e"] isa LazyJSONVector
+        @test doc["f"] isa LazyJSONDict
         @test doc["g"] === nothing
 
         @test_throws KeyError doc["h"]
@@ -511,7 +511,7 @@ end
         @test collect(keys(doc)) == ["a", "b", "c", "d", "e", "f", "g"]
         @test length(doc) == 7
     end
-    @testset "Case №3: LazyVector interfaces" begin
+    @testset "Case №3: LazyJSONVector interfaces" begin
         str_json = """
         [
             "string",
@@ -523,14 +523,14 @@ end
             null
         ]
         """ 
-        doc = lazy_parse(str_json)
+        doc = parse_lazy_json(str_json)
 
         @test doc[1] == "string"
         @test doc[2] == 1.0 && doc[2] isa Float64
         @test doc[3] == 3 && doc[3] isa Int64
         @test doc[4]
-        @test doc[5] isa LazyVector
-        @test doc[6] isa LazyDict
+        @test doc[5] isa LazyJSONVector
+        @test doc[6] isa LazyJSONDict
         @test doc[7] === nothing
 
         @test_throws BoundsError doc[8]

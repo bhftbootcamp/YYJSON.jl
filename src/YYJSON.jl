@@ -167,11 +167,11 @@ export parse_json,
     open_json,
     YYJSONError
 
-export LazyDict,
-    LazyVector,
-    LazyYYJSONError,
-    lazy_parse,
-    lazy_open
+export LazyJSONDict,
+    LazyJSONVector,
+    LazyJSONError,
+    parse_lazy_json,
+    open_lazy_json
 
 using yyjson_jll
 
@@ -620,10 +620,10 @@ end
 include("Reader.jl")
 using .Reader
 
-include("Parser.jl")
-using .Parser
+include("ParserJSON.jl")
+using .ParserJSON
 
-include("LazyParser.jl")
-using .LazyParser
+include("LazyJSON.jl")
+using .LazyJSON
 
 end
