@@ -1,7 +1,6 @@
 module LazyParser
 
-export JSONDoc,
-    LazyDict,
+export LazyDict,
     LazyVector,
     LazyYYJSONError
 
@@ -17,14 +16,31 @@ end
 Base.show(io::IO, e::LazyYYJSONError) = print(io, e.message)
 
 #__ LazyDict
-struct LazyDict <: AbstractDict{AbstractString, Any}
+
+mutable struct LazyDict <: AbstractDict{AbstractString, Any}
     ptr::Ptr{YYJSONVal}
     iter::YYJSONObjIter
+    doc_ptr::Ptr
+    alc_ptr::Ptr
+    is_open::Bool
 
     function LazyDict(ptr::Ptr{YYJSONVal})
         iter = YYJSONObjIter()
-        new(ptr, iter)
+        new(ptr, iter, C_NULL, C_NULL, true)
     end
+
+    function LazyDict(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
+        iter = YYJSONObjIter()
+        new(ptr, iter, doc_ptr, alc_ptr, true)
+    end
+end
+
+function Base.close(root::LazyDict)
+    (root.is_open && root.alc_ptr != C_NULL && root.doc_ptr != C_NULL) || return nothing
+    yyjson_doc_free(root.doc_ptr)
+    yyjson_alc_dyn_free(root.alc_ptr)
+    root.is_open = false
+    return nothing
 end
 
 function Base.getindex(obj::LazyDict, key::AbstractString)
@@ -60,8 +76,27 @@ Base.length(x::LazyDict) = yyjson_obj_size(x.ptr)
 
 #__ LazyVector
 
-struct LazyVector <: AbstractVector{Any}
+mutable struct LazyVector <: AbstractVector{Any}
     ptr::Ptr{YYJSONVal}
+    doc_ptr::Ptr
+    alc_ptr::Ptr
+    is_open::Bool
+
+    function LazyVector(ptr::Ptr{YYJSONVal})
+        new(ptr, C_NULL, C_NULL, true)
+    end
+
+    function LazyVector(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
+        new(ptr, doc_ptr, alc_ptr, true)
+    end
+end
+
+function Base.close(root::LazyVector)
+    (root.is_open && root.alc_ptr != C_NULL && root.doc_ptr != C_NULL) || return nothing
+    yyjson_doc_free(root.doc_ptr)
+    yyjson_alc_dyn_free(root.alc_ptr)
+    root.is_open = false
+    return nothing
 end
 
 Base.length(x::LazyVector) = yyjson_arr_size(x.ptr)
@@ -78,64 +113,6 @@ function Base.get(arr::LazyVector, index::Integer, default)
     (1 <= index <= length(arr)) || return default
     value_ptr = yyjson_arr_get(arr.ptr, index-1)
     return value_ptr != C_NULL ? parse_value(value_ptr) : default
-end
-
-#__ JSONDoc
-mutable struct JSONDoc{T <: Union{LazyDict,LazyVector}} 
-    doc_ptr::Ptr{YYJSONDoc}
-    alc_ptr::Ptr{YYJSONAlc}
-    root::T
-    is_open::Bool
-
-    function JSONDoc(doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc}, root::T) where {T <: Union{LazyDict,LazyVector}} 
-        doc = new{T}(doc_ptr, alc_ptr, root, true)
-        finalizer(close, doc)
-        return doc
-    end
-end
-
-Base.length(doc::JSONDoc) = length(doc.root)
-Base.isopen(doc::JSONDoc) = doc.is_open
-Base.keys(doc::JSONDoc) = keys(doc.root)
-Base.values(doc::JSONDoc) = values(doc.root)
-Base.iterate(doc::JSONDoc) = iterate(doc.root)
-Base.iterate(doc::JSONDoc{LazyDict}, state) = iterate(doc.root, state)
-Base.iterate(doc::JSONDoc{LazyVector}, state::Tuple) = iterate(doc.root, state)
-
-function Base.print(io::IO, ::JSONDoc{LazyDict})
-    print(io, "JSONDoc{LazyDict}")
-end
-
-function Base.show(io::IO, doc::JSONDoc{LazyDict})
-    len = length(doc)
-    print(io, doc, " with ", len, " entr$(len < 2 ? "y" : "ies")")
-end
-
-function Base.print(io::IO, ::JSONDoc{LazyVector})
-    print(io, "JSONDoc{LazyVector}")
-end
-
-function Base.show(io::IO, doc::JSONDoc{LazyVector})
-    len = length(doc)
-    print(io, len, "-element ", doc)
-end
-
-function Base.close(doc::JSONDoc)
-    isopen(doc) || return nothing
-    yyjson_doc_free(doc.doc_ptr)
-    yyjson_alc_dyn_free(doc.alc_ptr)
-    doc.is_open = false
-    return nothing
-end
-
-function Base.getindex(doc::JSONDoc, key::Union{AbstractString,Integer})
-    value = getindex(doc.root, key)
-    return value
-end
-
-function Base.get(doc::JSONDoc, key::Union{AbstractString,Integer}, default)
-    value = get(doc.root, key, default)
-    return value
 end
 
 #__ Parser
@@ -177,8 +154,9 @@ end
 function lazy_parse(json::AbstractString; kw...)
     allocator = yyjson_alc_dyn_new()
     doc_ptr = read_json_doc(json; alc = allocator, kw...)
-    root = parse_root(doc_ptr)
-    return JSONDoc(doc_ptr, allocator, root)
+    root_ptr = yyjson_doc_get_root(doc_ptr)
+    root_ptr == C_NULL && throw(LazyYYJSONError("Error parsing root"))
+    return yyjson_is_obj(root_ptr) ? LazyDict(root_ptr, doc_ptr, allocator) : LazyVector(root_ptr, doc_ptr, allocator)
 end
 
 function lazy_parse(json::AbstractVector{UInt8}; kw...)
@@ -197,8 +175,9 @@ end
 function lazy_open(path::AbstractString; kw...)
     allocator = yyjson_alc_dyn_new()
     doc_ptr = open_json_doc(path; alc = allocator, kw...)
-    root = parse_root(doc_ptr)
-    return JSONDoc(doc_ptr, allocator, root)
+    root_ptr = yyjson_doc_get_root(doc_ptr)
+    root_ptr == C_NULL && throw(LazyYYJSONError("Error parsing root"))
+    return yyjson_is_obj(root_ptr) ? LazyDict(root_ptr, doc_ptr, allocator) : LazyVector(root_ptr, doc_ptr, allocator)
 end
 
 function lazy_open(io::IO; kw...)

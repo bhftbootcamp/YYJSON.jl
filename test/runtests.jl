@@ -467,7 +467,7 @@ end
             "c": "3"
         }
         """
-        @test lazy_parse(str_json) isa JSONDoc{LazyDict}
+        @test lazy_parse(str_json) isa LazyDict
 
         byte_json = b"""
         [
@@ -476,10 +476,10 @@ end
             "3"
         ]
         """
-        @test lazy_parse(byte_json) isa JSONDoc{LazyVector}
+        @test lazy_parse(byte_json) isa LazyVector
 
         lazy_parse(byte_json) do doc
-            @test doc isa JSONDoc{LazyVector}
+            @test doc isa LazyVector
         end
     end
 

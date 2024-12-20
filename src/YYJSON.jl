@@ -167,8 +167,7 @@ export parse_json,
     open_json,
     YYJSONError
 
-export JSONDoc,
-    LazyDict,
+export LazyDict,
     LazyVector,
     LazyYYJSONError,
     lazy_parse,
