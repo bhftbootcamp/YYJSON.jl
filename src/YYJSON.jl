@@ -73,6 +73,11 @@ export YYJSONDoc,
     YYJSONArrIter,
     YYJSONObjIter
 
+export YYJSONDoc_NULL,
+    YYJSONVal_NULL,
+    YYJSONAlc_NULL,
+    YYJSONUInt8_NULL
+
 export yyjson_read,
     yyjson_read_file,
     yyjson_read_opts,
@@ -243,6 +248,11 @@ const YYJSON_READ_ERROR_FILE_READ = 13
 struct YYJSONDoc end
 struct YYJSONVal end
 struct YYJSONAlc end
+
+const YYJSONDoc_NULL   = Ptr{YYJSONDoc}(C_NULL)
+const YYJSONVal_NULL   = Ptr{YYJSONVal}(C_NULL)
+const YYJSONAlc_NULL   = Ptr{YYJSONAlc}(C_NULL)
+const YYJSONUInt8_NULL = Ptr{UInt8}(C_NULL)
 
 mutable struct YYJSONReadErr <: Exception
     code::YYJSONReadCode
