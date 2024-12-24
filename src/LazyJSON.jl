@@ -20,7 +20,7 @@ Base.show(io::IO, e::LazyJSONError) = print(io, e.message)
 #__ LazyJSONDict
 
 """
-    LazyJSONDict <: AbstractDict{AbstractString, Any}
+    LazyJSONDict <: AbstractDict{AbstractString,Any}
 
 Represents a dictionary for a JSON object.
 
@@ -31,7 +31,7 @@ Represents a dictionary for a JSON object.
 - `alc_ptr::Ptr{YYJSONAlc}`: The dynamic allocator pointer (non-null only for the root).
 - `freed::Bool`: Flag indicating whether the document is freed.
 """
-mutable struct LazyJSONDict <: AbstractDict{AbstractString, Any}
+mutable struct LazyJSONDict <: AbstractDict{AbstractString,Any}
     ptr::Ptr{YYJSONVal}
     iter::YYJSONObjIter
     doc_ptr::Ptr{YYJSONDoc}
@@ -177,10 +177,13 @@ function parse_json_root(doc_ptr::Ptr{YYJSONDoc})
 end
 
 """
-    parse_lazy_json(json::AbstractString; kw...)
-    parse_lazy_json(json::AbstractVector{UInt8}; kw...)
+    parse_lazy_json(json::String; kw...)
+    parse_lazy_json(json::Vector{UInt8}; kw...)
 
 Parse a JSON string `json` (or vector of `UInt8`) into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+
+!!! note
+    When it's no longer needed, it should be closed with `close` or use `do` block syntax.
 
 ## Keyword arguments
 Similar to [`parse_json`](@ref).
@@ -232,36 +235,22 @@ Similar to [`parse_json`](@ref).
 ## Examples
 ```julia
 julia> json = \"\"\"{
-           "str": "John Doe",
-           "num": "30",
-           "array": [1,2,{"a": 3, "b": null}],
-           "bool": false,
-           "obj" : {"a": 1, "b": null},
-           "another": "key"
+           "array": [1,2,3]
        }
        \"\"\";
 
-obj = Dict()
 array = []
 parse_lazy_json(json) do data
     for value in data["array"]
-        push!(array, value isa LazyJSONDict ? Dict(value) : value)
-    end
-    for (key, value) in data["obj"]
-        obj[key] = value
+        push!(array, value)
     end
 end
-
-julia> obj
-Dict{Any, Any} with 2 entries:
-  "b" => nothing
-  "a" => 1
 
 julia> array
 3-element Vector{Any}:
  1
  2
-  Dict{AbstractString, Any}("b" => nothing, "a" => 3)
+ 3
 ```
 """
 function parse_lazy_json(f::Function, x...; kw...)
@@ -274,9 +263,12 @@ function parse_lazy_json(f::Function, x...; kw...)
 end
 
 """
-    open_lazy_json(path::AbstractString; kw...)
+    open_lazy_json(path::String; kw...)
 
 Reads a JSON file from a given `path` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+
+!!! note
+    When it's no longer needed, it should be closed with `close` or use `do` block syntax.
 
 ## Keyword arguments
 Similar to [`parse_json`](@ref).
@@ -292,9 +284,12 @@ function open_lazy_json(path::AbstractString; kw...)
 end
 
 """
-    open_lazy_json(path::AbstractString; kw...)
+    open_lazy_json(io::IO; kw...)
 
 Reads a JSON file from a given `io` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+
+!!! note
+    When it's no longer needed, it should be closed with `close` or use `do` block syntax.
 
 ## Keyword arguments
 Similar to [`parse_json`](@ref).

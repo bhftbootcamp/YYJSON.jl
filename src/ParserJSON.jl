@@ -87,7 +87,7 @@ function parse_value(val_ptr::Ptr{YYJSONVal}, dict_type::Type{<:AbstractDict}, n
 end
 
 """
-    parse_json(x::AbstractString; kw...)
+    parse_json(x::String; kw...)
     parse_json(x::Vector{UInt8}; kw...)
 
 Parse a JSON string `x` (or vector of `UInt8`) into a dictionary.
@@ -149,7 +149,7 @@ function parse_json(json::AbstractVector{UInt8}; kw...)
 end
 
 """
-    open_json(path::AbstractString; kw...)
+    open_json(path::String; kw...)
 
 Reads a JSON file from a given `path` and parse it into dictionary.
 
