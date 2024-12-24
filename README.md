@@ -81,8 +81,8 @@ using YYJSON
 json = read("assets/binance_exchange_info.json", String);
 
 function test_yyjson(json)
-    d = parse_json(json)
-    return d["symbols"][1]["filters"][1]["filterType"]
+    rd = parse_json(json)
+    return rd["symbols"][1]["filters"][1]["filterType"]
 end
 
 function test_lazy_yyjson(json)
