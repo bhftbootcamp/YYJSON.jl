@@ -19,29 +19,41 @@ Base.show(io::IO, e::LazyJSONError) = print(io, e.message)
 
 #__ LazyJSONDict
 
+"""
+    LazyJSONDict <: AbstractDict{AbstractString, Any}
+
+Represents a dictionary for a JSON object.
+
+## Fields
+- `ptr::Ptr{YYJSONVal}`: The object value pointer.
+- `iter::YYJSONObjIter`: The object iterator structute.
+- `doc_ptr::Ptr{YYJSONDoc}`: The JSON document pointer (non-null only for the root).
+- `alc_ptr::Ptr{YYJSONAlc}`: The dynamic allocator pointer (non-null only for the root).
+- `freed::Bool`: Flag indicating whether the document is freed.
+"""
 mutable struct LazyJSONDict <: AbstractDict{AbstractString, Any}
     ptr::Ptr{YYJSONVal}
     iter::YYJSONObjIter
-    doc_ptr::Ptr
-    alc_ptr::Ptr
-    is_open::Bool
+    doc_ptr::Ptr{YYJSONDoc}
+    alc_ptr::Ptr{YYJSONAlc}
+    freed::Bool
 
     function LazyJSONDict(ptr::Ptr{YYJSONVal})
         iter = YYJSONObjIter()
-        new(ptr, iter, YYJSONDoc_NULL, YYJSONAlc_NULL, true)
+        new(ptr, iter, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
     end
 
     function LazyJSONDict(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
         iter = YYJSONObjIter()
-        new(ptr, iter, doc_ptr, alc_ptr, true)
+        new(ptr, iter, doc_ptr, alc_ptr, false)
     end
 end
 
 function Base.close(obj::LazyJSONDict)
-    obj.is_open || return nothing
+    obj.freed && return nothing
     yyjson_doc_free(obj.doc_ptr)
     yyjson_alc_dyn_free(obj.alc_ptr)
-    obj.is_open = false
+    obj.freed = true
     return nothing
 end
 
@@ -78,26 +90,37 @@ Base.length(x::LazyJSONDict) = yyjson_obj_size(x.ptr)
 
 #__ LazyJSONVector
 
+"""
+    LazyJSONVector <: AbstractVector{Any}
+
+Represents a vector for a JSON array.
+
+## Fields
+- `ptr::Ptr{YYJSONVal}`: The array value pointer.
+- `doc_ptr::Ptr{YYJSONDoc}`: The JSON document pointer (non-null only for the root).
+- `alc_ptr::Ptr{YYJSONAlc}`: The dynamic allocator pointer (non-null only for the root).
+- `freed::Bool`: Flag indicating whether the document is freed.
+"""
 mutable struct LazyJSONVector <: AbstractVector{Any}
     ptr::Ptr{YYJSONVal}
-    doc_ptr::Ptr
-    alc_ptr::Ptr
-    is_open::Bool
+    doc_ptr::Ptr{YYJSONDoc}
+    alc_ptr::Ptr{YYJSONAlc}
+    freed::Bool
 
     function LazyJSONVector(ptr::Ptr{YYJSONVal})
-        new(ptr, YYJSONDoc_NULL, YYJSONAlc_NULL, true)
+        new(ptr, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
     end
 
     function LazyJSONVector(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
-        new(ptr, doc_ptr, alc_ptr, true)
+        new(ptr, doc_ptr, alc_ptr, false)
     end
 end
 
 function Base.close(arr::LazyJSONVector)
-    arr.is_open || return nothing
+    arr.freed && return nothing
     yyjson_doc_free(arr.doc_ptr)
     yyjson_alc_dyn_free(arr.alc_ptr)
-    arr.is_open = false
+    arr.freed = true
     return nothing
 end
 
@@ -153,6 +176,37 @@ function parse_json_root(doc_ptr::Ptr{YYJSONDoc})
     return root_ptr
 end
 
+"""
+    parse_lazy_json(json::AbstractString; kw...)
+    parse_lazy_json(json::AbstractVector{UInt8}; kw...)
+
+Parse a JSON string `json` (or vector of `UInt8`) into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+
+## Keyword arguments
+Similar to [`parse_json`](@ref).
+
+## Examples
+```julia
+julia> json = \"\"\"{
+           "str": "John Doe",
+           "num": "30",
+           "array": [1,2,{"a": 3, "b": null}],
+           "bool": false,
+           "obj" : {"a": 1, "b": null},
+           "another": "key"
+       }
+       \"\"\";
+
+julia> parse_lazy_json(json)
+LazyJSONDict with 6 entries:
+  "str"     => "John Doe"
+  "num"     => "30"
+  "array"   => Any[1, 2, LazyJSONDict("a"=>3, "b"=>nothing)]
+  "bool"    => false
+  "obj"     => LazyJSONDict("a"=>1, "b"=>nothing)
+  "another" => "key"
+```
+"""
 function parse_lazy_json(json::AbstractString; kw...)
     allocator = yyjson_alc_dyn_new()
     allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
@@ -167,15 +221,66 @@ function parse_lazy_json(json::AbstractVector{UInt8}; kw...)
     return parse_lazy_json(unsafe_string(pointer(json), length(json)); kw...)
 end
 
-function parse_lazy_json(f::Function, x...; kw...)
-    doc = parse_lazy_json(x...; kw...)
-    try
-        f(doc)
-    finally
-        close(doc)
+"""
+    parse_lazy_json(f::Function, x...; kw...)
+
+A helper function for parsing JSON string `x` (or vector of `UInt8`) and retrieving it data with a batch of requests.
+
+## Keyword arguments
+Similar to [`parse_json`](@ref).
+
+## Examples
+```julia
+julia> json = \"\"\"{
+           "str": "John Doe",
+           "num": "30",
+           "array": [1,2,{"a": 3, "b": null}],
+           "bool": false,
+           "obj" : {"a": 1, "b": null},
+           "another": "key"
+       }
+       \"\"\";
+
+obj = Dict()
+array = []
+parse_lazy_json(json) do data
+    for value in data["array"]
+        push!(array, value isa LazyJSONDict ? Dict(value) : value)
+    end
+    for (key, value) in data["obj"]
+        obj[key] = value
     end
 end
 
+julia> obj
+Dict{Any, Any} with 2 entries:
+  "b" => nothing
+  "a" => 1
+
+julia> array
+3-element Vector{Any}:
+ 1
+ 2
+  Dict{AbstractString, Any}("b" => nothing, "a" => 3)
+```
+"""
+function parse_lazy_json(f::Function, x...; kw...)
+    root = parse_lazy_json(x...; kw...)
+    try
+        f(root)
+    finally
+        close(root)
+    end
+end
+
+"""
+    open_lazy_json(path::AbstractString; kw...)
+
+Reads a JSON file from a given `path` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+
+## Keyword arguments
+Similar to [`parse_json`](@ref).
+"""
 function open_lazy_json(path::AbstractString; kw...)
     allocator = yyjson_alc_dyn_new()
     allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
@@ -186,16 +291,33 @@ function open_lazy_json(path::AbstractString; kw...)
     return root
 end
 
+"""
+    open_lazy_json(path::AbstractString; kw...)
+
+Reads a JSON file from a given `io` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+
+## Keyword arguments
+Similar to [`parse_json`](@ref).
+"""
 function open_lazy_json(io::IO; kw...)
     return parse_lazy_json(read(io))
 end
 
+"""
+    open_lazy_json(f::Function, x...; kw...)
+
+A helper function for parsing JSON from a given path or buffer and retrieving it data with a 
+batch of requests.
+
+## Keyword arguments
+Similar to [`parse_json`](@ref).
+"""
 function open_lazy_json(f::Function, x...; kw...)
-    doc = open_lazy_json(x...; kw...)
+    root = open_lazy_json(x...; kw...)
     try
-        f(doc)
+        f(root)
     finally
-        close(doc)
+        close(root)
     end
 end
 
