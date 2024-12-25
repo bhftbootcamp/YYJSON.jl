@@ -26,7 +26,7 @@ Represents a dictionary for a JSON object.
 
 ## Fields
 - `ptr::Ptr{YYJSONVal}`: The object value pointer.
-- `iter::YYJSONObjIter`: The object iterator structute.
+- `iter::YYJSONObjIter`: The object iterator structure.
 - `doc_ptr::Ptr{YYJSONDoc}`: The JSON document pointer (non-null only for the root).
 - `alc_ptr::Ptr{YYJSONAlc}`: The dynamic allocator pointer (non-null only for the root).
 - `freed::Bool`: Flag indicating whether the document is freed.
