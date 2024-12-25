@@ -26,28 +26,28 @@ function bitwise_read_flag(;
     return flag
 end
 
-function read_json_doc(json::AbstractString; kw...)
+function read_json_doc(json::AbstractString; alc = YYJSONAlc_NULL, kw...)
     err = YYJSONReadErr()
     doc_ptr = yyjson_read_opts(
         json,
         ncodeunits(json),
         bitwise_read_flag(; kw...),
-        C_NULL,
+        alc,
         pointer_from_objref(err),
     )
-    doc_ptr == C_NULL && throw(err)
+    doc_ptr === YYJSONDoc_NULL && throw(err)
     return doc_ptr
 end
 
-function open_json_doc(path::AbstractString; kw...)
+function open_json_doc(path::AbstractString; alc = YYJSONAlc_NULL, kw...)
     err = YYJSONReadErr()
     doc_ptr = yyjson_read_file(
         path,
         bitwise_read_flag(; kw...),
-        C_NULL,
+        alc,
         pointer_from_objref(err),
     )
-    doc_ptr == C_NULL && throw(err)
+    doc_ptr === YYJSONDoc_NULL && throw(err)
     return doc_ptr
 end
 

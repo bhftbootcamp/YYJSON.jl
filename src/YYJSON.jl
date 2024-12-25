@@ -73,6 +73,11 @@ export YYJSONDoc,
     YYJSONArrIter,
     YYJSONObjIter
 
+export YYJSONDoc_NULL,
+    YYJSONVal_NULL,
+    YYJSONAlc_NULL,
+    YYJSONUInt8_NULL
+
 export yyjson_read,
     yyjson_read_file,
     yyjson_read_opts,
@@ -159,9 +164,19 @@ export yyjson_is_obj,
     yyjson_obj_iter_getn,
     yyjson_obj_iter_get_val
 
+export yyjson_alc_dyn_new,
+    yyjson_alc_dyn_free,
+    yyjson_alc_pool_init
+
 export parse_json,
     open_json,
     YYJSONError
+
+export LazyJSONDict,
+    LazyJSONVector,
+    LazyJSONError,
+    parse_lazy_json,
+    open_lazy_json
 
 using yyjson_jll
 
@@ -234,6 +249,11 @@ struct YYJSONDoc end
 struct YYJSONVal end
 struct YYJSONAlc end
 
+const YYJSONDoc_NULL   = Ptr{YYJSONDoc}(C_NULL)
+const YYJSONVal_NULL   = Ptr{YYJSONVal}(C_NULL)
+const YYJSONAlc_NULL   = Ptr{YYJSONAlc}(C_NULL)
+const YYJSONUInt8_NULL = Ptr{UInt8}(C_NULL)
+
 mutable struct YYJSONReadErr <: Exception
     code::YYJSONReadCode
     msg::Ptr{UInt8}
@@ -276,9 +296,10 @@ mutable struct YYJSONObjIter
     idx::Csize_t
     max::Csize_t
     cur::Ptr{YYJSONVal}
+    obj::Ptr{YYJSONVal}
 
     function YYJSONObjIter()
-        return new(0, 0, C_NULL)
+        return new(0, 0, C_NULL, C_NULL)
     end
 end
 
@@ -592,10 +613,27 @@ function yyjson_obj_iter_get_val(key)
     return ccall((:yyjson_obj_iter_get_val, libyyjson), Ptr{YYJSONVal}, (Ptr{YYJSONVal},), key)
 end
 
+#__Allocator
+
+function yyjson_alc_dyn_new()
+    return ccall((:yyjson_alc_dyn_new, libyyjson), Ptr{YYJSONAlc}, ())
+end
+
+function yyjson_alc_dyn_free(alc)
+    return ccall((:yyjson_alc_dyn_free, libyyjson), Cvoid, (Ptr{YYJSONAlc},), alc)
+end
+
+function yyjson_alc_pool_init(alc, buff, size)
+    return ccall((:yyjson_alc_pool_init, libyyjson), Bool, (Ptr{YYJSONAlc}, Ptr{Cvoid}, Csize_t), alc, buff, size)
+end
+
 include("Reader.jl")
 using .Reader
 
-include("Parser.jl")
-using .Parser
+include("ParserJSON.jl")
+using .ParserJSON
+
+include("LazyJSON.jl")
+using .LazyJSON
 
 end
