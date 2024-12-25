@@ -143,9 +143,7 @@ end
 #__ API
 
 function parse_json_value(ptr::Ptr{YYJSONVal})
-    return if yyjson_is_str(ptr)
-        parse_json_string(ptr)
-    elseif yyjson_is_raw(ptr)
+    return if yyjson_is_str(ptr) || yyjson_is_raw(ptr)
         parse_json_string(ptr)
     elseif yyjson_is_num(ptr)
         parse_json_number(ptr)
@@ -161,9 +159,9 @@ function parse_json_value(ptr::Ptr{YYJSONVal})
 end
 
 function parse_json_string(ptr::Ptr{YYJSONVal})
-    ptr_char = yyjson_get_str(ptr)
-    ptr_char === YYJSONUInt8_NULL && throw(LazyJSONError("Error parsing string."))
-    return unsafe_string(ptr_char)
+    char_ptr = yyjson_get_str(ptr)
+    char_ptr === YYJSONUInt8_NULL && throw(LazyJSONError("Error parsing string."))
+    return unsafe_string(char_ptr)
 end
 
 function parse_json_number(ptr::Ptr{YYJSONVal})
@@ -189,7 +187,7 @@ Parse a JSON string `json` (or vector of `UInt8`) into a [`LazyJSONDict`](@ref) 
 Similar to [`parse_json`](@ref).
 
 ## Examples
-```julia
+```julia-repl
 julia> json = \"\"\"{
            "str": "John Doe",
            "num": "30",
@@ -210,7 +208,7 @@ LazyJSONDict with 6 entries:
   "another" => "key"
 ```
 
-```julia
+```julia-repl
 julia> json = \"\"\"{
            "array": [1,2,3]
        }
@@ -237,7 +235,7 @@ function parse_lazy_json(json::AbstractString; kw...)
     allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
     doc_ptr = read_json_doc(json; alc = allocator, kw...)
     root_ptr = parse_json_root(doc_ptr)
-    root =  yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
+    root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
     finalizer(close, root)
     return root
 end
@@ -274,7 +272,7 @@ function open_lazy_json(path::AbstractString; kw...)
     allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
     doc_ptr = open_json_doc(path; alc = allocator, kw...)
     root_ptr = parse_json_root(doc_ptr)
-    root =  yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
+    root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
     finalizer(close, root)
     return root
 end
