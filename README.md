@@ -78,7 +78,7 @@ Lazy parsing enables more efficient value retrieval compared to regular parsing:
 ```julia
 using YYJSON
 
-json = read("assets/binance_exchange_info.json", String)
+json = read("assets/exchange_info.json", String)
 
 function test_full_parse(json)
     parsed = parse_json(json)
