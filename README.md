@@ -78,25 +78,25 @@ Lazy parsing enables more efficient value retrieval compared to regular parsing:
 ```julia
 using YYJSON
 
-json = read("assets/binance_exchange_info.json", String);
+json = read("assets/exchange_info.json", String)
 
-function test_yyjson(json)
-    rd = parse_json(json)
-    return rd["symbols"][1]["filters"][1]["filterType"]
+function test_full_parse(json)
+    parsed = parse_json(json)
+    return parsed["symbols"][1]["filters"][1]["filterType"]
 end
 
-function test_lazy_yyjson(json)
-    parse_lazy_json(json) do ld
-        ld["symbols"][1]["filters"][1]["filterType"]
+function test_lazy_parse(json)
+    parse_lazy_json(json) do lazy_parsed
+        return lazy_parsed["symbols"][1]["filters"][1]["filterType"]
     end
 end
 
-julia> @time test_yyjson(json)
+julia> @time test_full_parse(json)
   0.000245 seconds (2.89 k allocations: 203.727 KiB)
 "PRICE_FILTER"
 
-julia> @time test_lazy_yyjson(json)
-  0.000054 seconds (10 allocations: 448 bytes)
+julia> @time test_lazy_parse(json)
+  0.000041 seconds (10 allocations: 448 bytes)
 "PRICE_FILTER"
 ```
 
