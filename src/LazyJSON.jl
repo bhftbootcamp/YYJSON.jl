@@ -177,8 +177,8 @@ function parse_json_root(doc_ptr::Ptr{YYJSONDoc})
 end
 
 """
-    parse_lazy_json(json::String; kw...)
-    parse_lazy_json(json::Vector{UInt8}; kw...)
+    parse_lazy_json([f::Function], json::String; kw...)
+    parse_lazy_json([f::Function], json::Vector{UInt8}; kw...)
 
 Parse a JSON string `json` (or vector of `UInt8`) into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
 
@@ -209,30 +209,7 @@ LazyJSONDict with 6 entries:
   "obj"     => LazyJSONDict("a"=>1, "b"=>nothing)
   "another" => "key"
 ```
-"""
-function parse_lazy_json(json::AbstractString; kw...)
-    allocator = yyjson_alc_dyn_new()
-    allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
-    doc_ptr = read_json_doc(json; alc = allocator, kw...)
-    root_ptr = parse_json_root(doc_ptr)
-    root =  yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
-    finalizer(close, root)
-    return root
-end
 
-function parse_lazy_json(json::AbstractVector{UInt8}; kw...)
-    return parse_lazy_json(unsafe_string(pointer(json), length(json)); kw...)
-end
-
-"""
-    parse_lazy_json(f::Function, x...; kw...)
-
-A helper function for parsing JSON string `x` (or vector of `UInt8`) and retrieving it data with a batch of requests.
-
-## Keyword arguments
-Similar to [`parse_json`](@ref).
-
-## Examples
 ```julia
 julia> json = \"\"\"{
            "array": [1,2,3]
@@ -253,6 +230,22 @@ julia> array
  3
 ```
 """
+function parse_lazy_json end
+
+function parse_lazy_json(json::AbstractString; kw...)
+    allocator = yyjson_alc_dyn_new()
+    allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
+    doc_ptr = read_json_doc(json; alc = allocator, kw...)
+    root_ptr = parse_json_root(doc_ptr)
+    root =  yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
+    finalizer(close, root)
+    return root
+end
+
+function parse_lazy_json(json::AbstractVector{UInt8}; kw...)
+    return parse_lazy_json(unsafe_string(pointer(json), length(json)); kw...)
+end
+
 function parse_lazy_json(f::Function, x...; kw...)
     root = parse_lazy_json(x...; kw...)
     try
@@ -263,9 +256,10 @@ function parse_lazy_json(f::Function, x...; kw...)
 end
 
 """
-    open_lazy_json(path::String; kw...)
+    open_lazy_json([f::Function], path::String; kw...)
+    open_lazy_json([f::Function], io::IO; kw...)
 
-Reads a JSON file from a given `path` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
+Reads a JSON file from a given `path` or `io` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
 
 !!! note
     When it's no longer needed, it should be closed with `close` or use `do` block syntax.
@@ -273,6 +267,8 @@ Reads a JSON file from a given `path` and parse it into a [`LazyJSONDict`](@ref)
 ## Keyword arguments
 Similar to [`parse_json`](@ref).
 """
+function open_lazy_json end
+
 function open_lazy_json(path::AbstractString; kw...)
     allocator = yyjson_alc_dyn_new()
     allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
@@ -283,30 +279,10 @@ function open_lazy_json(path::AbstractString; kw...)
     return root
 end
 
-"""
-    open_lazy_json(io::IO; kw...)
-
-Reads a JSON file from a given `io` and parse it into a [`LazyJSONDict`](@ref) or [`LazyJSONVector`](@ref).
-
-!!! note
-    When it's no longer needed, it should be closed with `close` or use `do` block syntax.
-
-## Keyword arguments
-Similar to [`parse_json`](@ref).
-"""
 function open_lazy_json(io::IO; kw...)
     return parse_lazy_json(read(io))
 end
 
-"""
-    open_lazy_json(f::Function, x...; kw...)
-
-A helper function for parsing JSON from a given path or buffer and retrieving it data with a 
-batch of requests.
-
-## Keyword arguments
-Similar to [`parse_json`](@ref).
-"""
 function open_lazy_json(f::Function, x...; kw...)
     root = open_lazy_json(x...; kw...)
     try
