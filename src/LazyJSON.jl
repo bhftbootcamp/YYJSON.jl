@@ -125,7 +125,6 @@ function Base.close(arr::LazyJSONVector)
 end
 
 Base.length(x::LazyJSONVector) = yyjson_arr_size(x.ptr)
-
 Base.size(x::LazyJSONVector) = (yyjson_arr_size(x.ptr),)
 
 function Base.getindex(arr::LazyJSONVector, index::Integer)
@@ -143,18 +142,22 @@ end
 #__ API
 
 function parse_json_value(ptr::Ptr{YYJSONVal})
-    return if yyjson_is_str(ptr) || yyjson_is_raw(ptr)
+    if yyjson_is_str(ptr)
         parse_json_string(ptr)
     elseif yyjson_is_num(ptr)
         parse_json_number(ptr)
     elseif yyjson_is_bool(ptr)
         yyjson_get_bool(ptr)
+    elseif yyjson_is_null(ptr)
+        nothing
     elseif yyjson_is_obj(ptr)
         LazyJSONDict(ptr)
     elseif yyjson_is_arr(ptr)
         LazyJSONVector(ptr)
+    elseif yyjson_is_raw(ptr)
+        parse_json_string(ptr)
     else
-        nothing
+        throw(ArgumentError("Unsupported JSON value"))
     end
 end
 
