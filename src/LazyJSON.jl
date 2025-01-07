@@ -40,12 +40,12 @@ mutable struct LazyJSONDict <: AbstractDict{AbstractString,Any}
 
     function LazyJSONDict(ptr::Ptr{YYJSONVal})
         iter = YYJSONObjIter()
-        new(ptr, iter, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
+        return new(ptr, iter, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
     end
 
     function LazyJSONDict(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
         iter = YYJSONObjIter()
-        new(ptr, iter, doc_ptr, alc_ptr, false)
+        return new(ptr, iter, doc_ptr, alc_ptr, false)
     end
 end
 
@@ -108,11 +108,11 @@ mutable struct LazyJSONVector <: AbstractVector{Any}
     freed::Bool
 
     function LazyJSONVector(ptr::Ptr{YYJSONVal})
-        new(ptr, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
+        return new(ptr, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
     end
 
     function LazyJSONVector(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
-        new(ptr, doc_ptr, alc_ptr, false)
+        return new(ptr, doc_ptr, alc_ptr, false)
     end
 end
 
@@ -135,7 +135,7 @@ end
 
 function Base.get(arr::LazyJSONVector, index::Integer, default)
     (1 <= index <= length(arr)) || return default
-    value_ptr = yyjson_arr_get(arr.ptr, index-1)
+    value_ptr = yyjson_arr_get(arr.ptr, index - 1)
     return value_ptr !== YYJSONVal_NULL ? parse_json_value(value_ptr) : default
 end
 
