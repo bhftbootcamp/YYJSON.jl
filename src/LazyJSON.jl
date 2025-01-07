@@ -40,12 +40,12 @@ mutable struct LazyJSONDict <: AbstractDict{AbstractString,Any}
 
     function LazyJSONDict(ptr::Ptr{YYJSONVal})
         iter = YYJSONObjIter()
-        new(ptr, iter, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
+        return new(ptr, iter, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
     end
 
     function LazyJSONDict(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
         iter = YYJSONObjIter()
-        new(ptr, iter, doc_ptr, alc_ptr, false)
+        return new(ptr, iter, doc_ptr, alc_ptr, false)
     end
 end
 
@@ -108,11 +108,11 @@ mutable struct LazyJSONVector <: AbstractVector{Any}
     freed::Bool
 
     function LazyJSONVector(ptr::Ptr{YYJSONVal})
-        new(ptr, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
+        return new(ptr, YYJSONDoc_NULL, YYJSONAlc_NULL, false)
     end
 
     function LazyJSONVector(ptr::Ptr{YYJSONVal}, doc_ptr::Ptr{YYJSONDoc}, alc_ptr::Ptr{YYJSONAlc})
-        new(ptr, doc_ptr, alc_ptr, false)
+        return new(ptr, doc_ptr, alc_ptr, false)
     end
 end
 
@@ -135,11 +135,21 @@ end
 
 function Base.get(arr::LazyJSONVector, index::Integer, default)
     (1 <= index <= length(arr)) || return default
-    value_ptr = yyjson_arr_get(arr.ptr, index-1)
+    value_ptr = yyjson_arr_get(arr.ptr, index - 1)
     return value_ptr !== YYJSONVal_NULL ? parse_json_value(value_ptr) : default
 end
 
 #__ API
+
+function parse_json_string(ptr::Ptr{YYJSONVal})
+    char_ptr = yyjson_get_str(ptr)
+    char_ptr === YYJSONUInt8_NULL && throw(LazyJSONError("Error parsing string."))
+    return unsafe_string(char_ptr)
+end
+
+function parse_json_number(ptr::Ptr{YYJSONVal})
+    return yyjson_is_real(ptr) ? yyjson_get_real(ptr) : yyjson_get_int(ptr)
+end
 
 function parse_json_value(ptr::Ptr{YYJSONVal})
     if yyjson_is_str(ptr)
@@ -159,22 +169,6 @@ function parse_json_value(ptr::Ptr{YYJSONVal})
     else
         throw(ArgumentError("Unsupported JSON value"))
     end
-end
-
-function parse_json_string(ptr::Ptr{YYJSONVal})
-    char_ptr = yyjson_get_str(ptr)
-    char_ptr === YYJSONUInt8_NULL && throw(LazyJSONError("Error parsing string."))
-    return unsafe_string(char_ptr)
-end
-
-function parse_json_number(ptr::Ptr{YYJSONVal})
-    return yyjson_is_real(ptr) ? yyjson_get_real(ptr) : yyjson_get_int(ptr)
-end
-
-function parse_json_root(doc_ptr::Ptr{YYJSONDoc})
-    root_ptr = yyjson_doc_get_root(doc_ptr)
-    root_ptr === YYJSONVal_NULL && throw(LazyJSONError("Error parsing root."))
-    return root_ptr
 end
 
 """
@@ -234,11 +228,12 @@ julia> array
 function parse_lazy_json end
 
 function parse_lazy_json(json::AbstractString; kw...)
-    allocator = yyjson_alc_dyn_new()
-    allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
-    doc_ptr = read_json_doc(json; alc = allocator, kw...)
-    root_ptr = parse_json_root(doc_ptr)
-    root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
+    alc_ptr = yyjson_alc_dyn_new()
+    alc_ptr === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
+    doc_ptr = read_json_doc(json; alc = alc_ptr, kw...)
+    root_ptr = yyjson_doc_get_root(doc_ptr)
+    root_ptr === YYJSONVal_NULL && throw(LazyJSONError("Error parsing root."))
+    root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, alc_ptr) : LazyJSONVector(root_ptr, doc_ptr, alc_ptr)
     finalizer(close, root)
     return root
 end
@@ -271,11 +266,12 @@ Similar to [`parse_json`](@ref).
 function open_lazy_json end
 
 function open_lazy_json(path::AbstractString; kw...)
-    allocator = yyjson_alc_dyn_new()
-    allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
-    doc_ptr = open_json_doc(path; alc = allocator, kw...)
-    root_ptr = parse_json_root(doc_ptr)
-    root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, allocator) : LazyJSONVector(root_ptr, doc_ptr, allocator)
+    alc_ptr = yyjson_alc_dyn_new()
+    alc_ptr === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
+    doc_ptr = open_json_doc(path; alc = alc_ptr, kw...)
+    root_ptr = yyjson_doc_get_root(doc_ptr)
+    root_ptr === YYJSONVal_NULL && throw(LazyJSONError("Error parsing root."))
+    root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, alc_ptr) : LazyJSONVector(root_ptr, doc_ptr, alc_ptr)
     finalizer(close, root)
     return root
 end
