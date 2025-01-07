@@ -228,9 +228,9 @@ julia> array
 function parse_lazy_json end
 
 function parse_lazy_json(json::AbstractString; kw...)
-    allocator = yyjson_alc_dyn_new()
-    allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
-    doc_ptr = read_json_doc(json; alc = allocator, kw...)
+    alc_ptr = yyjson_alc_dyn_new()
+    alc_ptr === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
+    doc_ptr = read_json_doc(json; alc = alc_ptr, kw...)
     root_ptr = yyjson_doc_get_root(doc_ptr)
     root_ptr === YYJSONVal_NULL && throw(LazyJSONError("Error parsing root."))
     root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, alc_ptr) : LazyJSONVector(root_ptr, doc_ptr, alc_ptr)
@@ -266,9 +266,9 @@ Similar to [`parse_json`](@ref).
 function open_lazy_json end
 
 function open_lazy_json(path::AbstractString; kw...)
-    allocator = yyjson_alc_dyn_new()
-    allocator === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
-    doc_ptr = open_json_doc(path; alc = allocator, kw...)
+    alc_ptr = yyjson_alc_dyn_new()
+    alc_ptr === YYJSONAlc_NULL && throw(LazyJSONError("Failed to allocate memory for JSON parsing."))
+    doc_ptr = open_json_doc(path; alc = alc_ptr, kw...)
     root_ptr = yyjson_doc_get_root(doc_ptr)
     root_ptr === YYJSONVal_NULL && throw(LazyJSONError("Error parsing root."))
     root = yyjson_is_obj(root_ptr) ? LazyJSONDict(root_ptr, doc_ptr, alc_ptr) : LazyJSONVector(root_ptr, doc_ptr, alc_ptr)
