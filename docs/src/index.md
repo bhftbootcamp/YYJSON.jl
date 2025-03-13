@@ -95,3 +95,8 @@ julia> @time test_lazy_parse(json)
   0.000041 seconds (10 allocations: 448 bytes)
 "PRICE_FILTER"
 ```
+
+## Useful Links
+
+- [yyjson](https://github.com/ibireme/yyjson) – Official library repository.  
+- [yyjson_jll.jl](https://github.com/JuliaBinaryWrappers/yyjson_jll.jl) – Julia wrapper for yyjson.
