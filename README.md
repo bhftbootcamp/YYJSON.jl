@@ -100,6 +100,11 @@ julia> @time test_lazy_parse(json)
 "PRICE_FILTER"
 ```
 
+## Useful Links
+
+1. [yyjson](https://github.com/ibireme/yyjson) – Official library repository.  
+2. [yyjson_jll.jl](https://github.com/JuliaBinaryWrappers/yyjson_jll.jl) – Julia C wrapper.
+
 ## Contributing
 
 Contributions to YYJSON are welcome! If you encounter a bug, have a feature request, or would like to contribute code, please open an issue or a pull request on GitHub.
