@@ -102,8 +102,8 @@ julia> @time test_lazy_parse(json)
 
 ## Useful Links
 
-1. [yyjson](https://github.com/ibireme/yyjson) – Official library repository.  
-2. [yyjson_jll.jl](https://github.com/JuliaBinaryWrappers/yyjson_jll.jl) – Julia C wrapper.
+- [yyjson](https://github.com/ibireme/yyjson) – Official library repository.  
+- [yyjson_jll.jl](https://github.com/JuliaBinaryWrappers/yyjson_jll.jl) – Julia wrapper for yyjson.
 
 ## Contributing
 
