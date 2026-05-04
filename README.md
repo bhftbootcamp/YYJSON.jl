@@ -11,7 +11,7 @@ YYJSON is a convenient wrapper around [yyjson](https://github.com/ibireme/yyjson
 <html>
   <body>
     <table>
-      <tr><th>Feature&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</th><th><div>Description</div></th></tr>
+      <tr><th>Feature&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th><div>Description</div></th></tr>
       <tr>
         <td>Performance</td>
         <td><div>Able to <code>read</code> gigabytes of JSON document per second.</div></td>
